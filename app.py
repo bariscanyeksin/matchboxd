@@ -1,10 +1,6 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import numpy as np
-from numpy import dot
-from numpy.linalg import norm
-from sklearn.metrics.pairwise import cosine_similarity
 import json
 import time
 from streamlit.components.v1 import html
