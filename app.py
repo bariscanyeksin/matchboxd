@@ -625,13 +625,13 @@ if st.button("Compare"):
                 f"""
                 <div style="text-align: center; margin-bottom:20px;">
                     <span style="color:#4e82cf; font-weight:bold;">{user1}</span> watched 
-                    <span style="color:#27732a; font-size:18px; font-weight:bold;">{user1_percentage}%</span> 
+                    <span style="color:#27732a; font-size:18px; font-weight:bold;">{user2_percentage}%</span> 
                     of the films watched by 
                     <span style="color:#913636; font-weight:bold;">{user2}</span>.
                 </div>
                 <div style="text-align: center; margin-bottom:20px;">
                     <span style="color:#913636; font-weight:bold;">{user2}</span> watched 
-                    <span style="color:#27732a; font-size:18px; font-weight:bold;">{user2_percentage}%</span> 
+                    <span style="color:#27732a; font-size:18px; font-weight:bold;">{user1_percentage}%</span> 
                     of the films watched by 
                     <span style="color:#4e82cf; font-weight:bold;">{user1}</span>.
                 </div>
