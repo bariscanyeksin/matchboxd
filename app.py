@@ -45,12 +45,16 @@ page_bg_img = """
 .stAppHeader {
     display: none;
 }
+.stMainBlockContainer {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 st.title("Matchboxd.")
-st.write("Compare the movies watched by two Letterboxd users.")
+st.write("Compare the films watched by two Letterboxd users.")
 
 with st.expander("How to find username?"):
     st.markdown(
@@ -108,13 +112,13 @@ def get_profile_image(user):
         return None
 
 
-def create_poster_url(movie_slug):
+def create_poster_url(film_slug):
     headers = {
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "accept-language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
         "cache-control": "max-age=0",
         "priority": "u=0, i",
-        "referer": f"https://letterboxd.com/{movie_slug}",
+        "referer": f"https://letterboxd.com/{film_slug}",
         "sec-fetch-dest": "document",
         "sec-fetch-mode": "navigate",
         "sec-fetch-site": "same-origin",
@@ -123,7 +127,7 @@ def create_poster_url(movie_slug):
         "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
     }
 
-    response = requests.get(f"https://letterboxd.com/{movie_slug}", headers=headers)
+    response = requests.get(f"https://letterboxd.com/{film_slug}", headers=headers)
 
     if response.status_code != 200:
         return ""
@@ -156,9 +160,9 @@ def create_poster_url(movie_slug):
         return ""
 
 
-def get_all_movies(username):
+def get_all_films(username):
     base_url = f"https://letterboxd.com/{username}/films/by/entry-rating/page/"
-    movies_with_details = {}
+    films_with_details = {}
     headers = {
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "accept-language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -193,19 +197,19 @@ def get_all_movies(username):
             break
 
         soup = BeautifulSoup(response.text, "html.parser")
-        movie_list = soup.find(
+        film_list = soup.find(
             "ul", {"class": "poster-list -p70 -grid film-list clear"}
         )
 
-        if not movie_list:
+        if not film_list:
             break
 
-        for li in movie_list.find_all("li"):
+        for li in film_list.find_all("li"):
             div = li.find("div", {"data-target-link": True})
             if div:
-                movie_title = div.find("img").get("alt")
+                film_title = div.find("img").get("alt")
 
-                movie_url = div["data-target-link"]
+                film_url = div["data-target-link"]
 
                 rating_span = li.find("span", {"class": "rating"})
                 if rating_span:
@@ -214,31 +218,31 @@ def get_all_movies(username):
                 else:
                     rating = 0
 
-                movies_with_details[movie_title] = {
+                films_with_details[film_title] = {
                     "rating": rating,
-                    "movie_url": movie_url,
+                    "film_url": film_url,
                 }
 
-    return movies_with_details
+    return films_with_details
 
 
-def calculate_similarity_with_weighted_ratings(
-    movies1, ratings1, movies2, ratings2, threshold=0.5
+_ = """def calculate_similarity_with_weighted_ratings(
+    films1, ratings1, films2, ratings2, threshold=0.5
 ):
-    common_movies = set(movies1).intersection(set(movies2))
+    common_films = set(films1).intersection(set(films2))
 
-    if not common_movies:
+    if not common_films:
         return 0, []
 
-    common_ratio = len(common_movies) / max(len(movies1), len(movies2))
+    common_ratio = len(common_films) / max(len(films1), len(films2))
 
     total_weight_score = 0
     total_possible_score = 0
 
-    for movie in common_movies:
+    for film in common_films:
         try:
-            rating1 = ratings1[movies1.index(movie)]
-            rating2 = ratings2[movies2.index(movie)]
+            rating1 = ratings1[films1.index(film)]
+            rating2 = ratings2[films2.index(film)]
 
             if rating1 is None or rating2 is None:
                 continue
@@ -261,7 +265,18 @@ def calculate_similarity_with_weighted_ratings(
 
     similarity = (common_ratio * 0.5) + (rating_similarity * 0.5)
 
-    return similarity
+    return similarity"""
+    
+def calculate_similarity_basic(films1, films2):
+    common_films = set(films1).intersection(set(films2))
+
+    if not common_films:
+        return 0, 0, 0
+
+    common_ratio_user1 = len(common_films) / len(films1)
+    common_ratio_user2 = len(common_films) / len(films2)
+
+    return common_ratio_user1, common_ratio_user2
 
 def get_favourite_films(user):
     url = f"https://letterboxd.com/{user}/"
@@ -282,8 +297,8 @@ def get_favourite_films(user):
                     if "data-poster-url" in div.attrs
                     else None
                 )
-                movie_slug = div["data-poster-url"].replace("image-150/", "")
-                poster_url = create_poster_url(movie_slug)
+                film_slug = div["data-poster-url"].replace("image-150/", "")
+                poster_url = create_poster_url(film_slug)
                 films.append({"name": film_name, "url": film_url, "poster": poster_url})
             else:
                 print("Film divi bulunamadı")
@@ -328,19 +343,19 @@ def get_watchlist(username):
             break
 
         soup = BeautifulSoup(response.text, "html.parser")
-        movie_list = soup.find(
+        film_list = soup.find(
             "ul", {"class": "poster-list -p125 -grid -scaled128"}
         )
 
-        if not movie_list:
+        if not film_list:
             break
 
-        for li in movie_list.find_all("li"):
+        for li in film_list.find_all("li"):
             div = li.find("div", {"data-target-link": True})
             if div:
-                movie_title = div.find("img").get("alt")
+                film_title = div.find("img").get("alt")
 
-                movie_url = div["data-target-link"]
+                film_url = div["data-target-link"]
 
                 rating_span = li.find("span", {"class": "rating"})
                 if rating_span:
@@ -349,20 +364,20 @@ def get_watchlist(username):
                 else:
                     rating = 0
 
-                watchlist[movie_title] = {
+                watchlist[film_title] = {
                     "rating": rating,
-                    "movie_url": movie_url,
+                    "film_url": film_url,
                 }
     return watchlist
 
 
-def find_high_rated_common_movies(movies_with_ratings1, movies_with_ratings2):
-    common_high_rated_movies = []
+def find_high_rated_common_films(films_with_ratings1, films_with_ratings2):
+    common_high_rated_films = []
 
-    for movie in movies_with_ratings1:
-        if movie in movies_with_ratings2:
-            rating1 = movies_with_ratings1[movie]["rating"]
-            rating2 = movies_with_ratings2[movie]["rating"]
+    for film in films_with_ratings1:
+        if film in films_with_ratings2:
+            rating1 = films_with_ratings1[film]["rating"]
+            rating2 = films_with_ratings2[film]["rating"]
 
             if (
                 rating1 is not None
@@ -370,29 +385,29 @@ def find_high_rated_common_movies(movies_with_ratings1, movies_with_ratings2):
                 and rating1 >= 4.5
                 and rating2 >= 4.5
             ):
-                common_high_rated_movies.append(
+                common_high_rated_films.append(
                     {
-                        "title": movie,
+                        "title": film,
                         "rating_user1": rating1,
                         "rating_user2": rating2,
-                        "movie_url": "https://letterboxd.com"
-                        + movies_with_ratings1[movie]["movie_url"],
+                        "film_url": "https://letterboxd.com"
+                        + films_with_ratings1[film]["film_url"],
                         "poster_url": create_poster_url(
-                            movies_with_ratings1[movie]["movie_url"]
+                            films_with_ratings1[film]["film_url"]
                         ),
                     }
                 )
 
-    return common_high_rated_movies
+    return common_high_rated_films
 
 
-def find_low_rated_common_movies(movies_with_ratings1, movies_with_ratings2):
-    common_low_rated_movies = []
+def find_low_rated_common_films(films_with_ratings1, films_with_ratings2):
+    common_low_rated_films = []
 
-    for movie in movies_with_ratings1:
-        if movie in movies_with_ratings2:
-            rating1 = movies_with_ratings1[movie]["rating"]
-            rating2 = movies_with_ratings2[movie]["rating"]
+    for film in films_with_ratings1:
+        if film in films_with_ratings2:
+            rating1 = films_with_ratings1[film]["rating"]
+            rating2 = films_with_ratings2[film]["rating"]
 
             if (
                 rating1 is not None
@@ -400,43 +415,43 @@ def find_low_rated_common_movies(movies_with_ratings1, movies_with_ratings2):
                 and 0.5 <= rating1 <= 1.5
                 and 0.5 <= rating2 <= 1.5
             ):
-                common_low_rated_movies.append(
+                common_low_rated_films.append(
                     {
-                        "title": movie,
+                        "title": film,
                         "rating_user1": rating1,
                         "rating_user2": rating2,
-                        "movie_url": "https://letterboxd.com"
-                        + movies_with_ratings1[movie]["movie_url"],
+                        "film_url": "https://letterboxd.com"
+                        + films_with_ratings1[film]["film_url"],
                         "poster_url": create_poster_url(
-                            movies_with_ratings1[movie]["movie_url"]
+                            films_with_ratings1[film]["film_url"]
                         ),
                     }
                 )
 
-    return common_low_rated_movies
+    return common_low_rated_films
 
 
-def find_common_movies_from_watchlist(watchlist_movies1, watchlist_movies2):
-    common_movies_from_watchlist = []
-    watchlist_movies2_set = set(watchlist_movies2.keys())  # Convert keys to a set for fast lookups
+def find_common_films_from_watchlist(watchlist_films1, watchlist_films2):
+    common_films_from_watchlist = []
+    watchlist_films2_set = set(watchlist_films2.keys())  # Convert keys to a set for fast lookups
 
-    for movie, details in watchlist_movies1.items():
-        if movie in watchlist_movies2_set:
+    for film, details in watchlist_films1.items():
+        if film in watchlist_films2_set:
             rating1 = details.get("rating")
-            rating2 = watchlist_movies2[movie].get("rating")
+            rating2 = watchlist_films2[film].get("rating")
 
             if rating1 is not None and rating2 is not None:
-                common_movies_from_watchlist.append(
+                common_films_from_watchlist.append(
                     {
-                        "title": movie,
+                        "title": film,
                         "rating_user1": rating1,
                         "rating_user2": rating2,
-                        "movie_url": "https://letterboxd.com" + details["movie_url"],
-                        "poster_url": create_poster_url(details["movie_url"]),
+                        "film_url": "https://letterboxd.com" + details["film_url"],
+                        "poster_url": create_poster_url(details["film_url"]),
                     }
                 )
 
-    return common_movies_from_watchlist
+    return common_films_from_watchlist
 
 
 if st.button("Compare"):
@@ -445,37 +460,37 @@ if st.button("Compare"):
     else:
         # start_time = time.time()
 
-        with st.spinner(f"Fetching movies for {user1}..."):
+        with st.spinner(f"Fetching films for {user1}..."):
             img_url1 = get_profile_image(user1)
-            movies_with_ratings1 = get_all_movies(user1)
-            movies_from_watchlist1 = get_watchlist(user1)
-            movies1 = list(movies_with_ratings1.keys())
-            ratings1 = [details["rating"] for details in movies_with_ratings1.values()]
+            films_with_ratings1 = get_all_films(user1)
+            films_from_watchlist1 = get_watchlist(user1)
+            films1 = list(films_with_ratings1.keys())
+            ratings1 = [details["rating"] for details in films_with_ratings1.values()]
 
-        with st.spinner(f"Fetching movies for {user2}..."):
+        with st.spinner(f"Fetching films for {user2}..."):
             img_url2 = get_profile_image(user2)
-            movies_with_ratings2 = get_all_movies(user2)
-            movies_from_watchlist2 = get_watchlist(user2)
-            movies2 = list(movies_with_ratings2.keys())
-            ratings2 = [details["rating"] for details in movies_with_ratings2.values()]
+            films_with_ratings2 = get_all_films(user2)
+            films_from_watchlist2 = get_watchlist(user2)
+            films2 = list(films_with_ratings2.keys())
+            ratings2 = [details["rating"] for details in films_with_ratings2.values()]
 
         with st.spinner("Fetching favourite films..."):
             favourite_films1 = get_favourite_films(user1)
             favourite_films2 = get_favourite_films(user2)
 
-        with st.spinner("Finding movies loved the most by both users..."):
-            movies_loved_the_most = find_high_rated_common_movies(
-                movies_with_ratings1, movies_with_ratings2
+        with st.spinner("Finding films loved the most by both users..."):
+            films_loved_the_most = find_high_rated_common_films(
+                films_with_ratings1, films_with_ratings2
             )
 
-        with st.spinner("Finding movies hated the most by both users..."):
-            movies_hated_the_most = find_low_rated_common_movies(
-                movies_with_ratings1, movies_with_ratings2
+        with st.spinner("Finding films hated the most by both users..."):
+            films_hated_the_most = find_low_rated_common_films(
+                films_with_ratings1, films_with_ratings2
             )
 
         with st.spinner("Fetching watchlists..."):
-            movies_watch_together = find_common_movies_from_watchlist(
-                movies_from_watchlist1, movies_from_watchlist2
+            films_watch_together = find_common_films_from_watchlist(
+                films_from_watchlist1, films_from_watchlist2
             )
 
         # end_time = time.time()
@@ -483,15 +498,17 @@ if st.button("Compare"):
 
         # st.write(f"Time taken: {elapsed_time:.2f} seconds")
 
-        if movies1 and movies2:
+        if films1 and films2:
             # Calculate similarity
-            # similarity, common_movies = calculate_similarity(movies1, movies2)
+            # similarity, common_films = calculate_similarity(films1, films2)
             # similarity_percentage = round(similarity * 100, 2)
 
-            similarity = calculate_similarity_with_weighted_ratings(
-                movies1, ratings1, movies2, ratings2
+            common_ratio_user1, common_ratio_user2 = calculate_similarity_basic(
+                films1, films2
             )
-            similarity_percentage = round(similarity * 100, 2)
+            
+            user1_percentage = int(round(common_ratio_user1 * 100))
+            user2_percentage = int(round(common_ratio_user2 * 100))
 
             col1, col2 = st.columns(2)
 
@@ -607,36 +624,41 @@ if st.button("Compare"):
             st.markdown(
                 f"""
                 <div style="text-align: center; margin-bottom:20px;">
-                    The similarity between 
-                    <span style="color:#4e82cf; font-weight:bold;">{user1}</span> 
-                    and 
-                    <span style="color:#913636; font-weight:bold;">{user2}</span> 
-                    is <span style="color:#27732a; font-size:18px; font-weight:bold;">{similarity_percentage}%</span>
+                    <span style="color:#4e82cf; font-weight:bold;">{user1}</span> watched 
+                    <span style="color:#27732a; font-size:18px; font-weight:bold;">{user1_percentage}%</span> 
+                    of the films watched by 
+                    <span style="color:#913636; font-weight:bold;">{user2}</span>.
+                </div>
+                <div style="text-align: center; margin-bottom:20px;">
+                    <span style="color:#913636; font-weight:bold;">{user2}</span> watched 
+                    <span style="color:#27732a; font-size:18px; font-weight:bold;">{user2_percentage}%</span> 
+                    of the films watched by 
+                    <span style="color:#4e82cf; font-weight:bold;">{user1}</span>.
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            if movies_loved_the_most:
-                with st.expander("Movies You Both Loved the Most ❤️"):
-                    movies_loved_the_most_cards_html = "".join(
+            if films_loved_the_most:
+                with st.expander("Films You Both Loved the Most ❤️"):
+                    films_loved_the_most_cards_html = "".join(
                         f"""
-                        <a href="{movie['movie_url']}" title="{movie['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
-                            <div class="movies-loved-the-most-card">
-                                <img src="{movie['poster_url']}" alt="{movie['title']}" class="movies-loved-the-most-image">
-                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{movie['title']}</div>
-                                <div style="font-size: 12px; color: #aaa;">{user1}: {movie['rating_user1']} ★</div>
-                                <div style="font-size: 12px; color: #aaa;">{user2}: {movie['rating_user2']} ★</div>
+                        <a href="{film['film_url']}" title="{film['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
+                            <div class="films-loved-the-most-card">
+                                <img src="{film['poster_url']}" alt="{film['title']}" class="films-loved-the-most-image">
+                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{film['title']}</div>
+                                <div style="font-size: 12px; color: #aaa;">{user1}: {film['rating_user1']} ★</div>
+                                <div style="font-size: 12px; color: #aaa;">{user2}: {film['rating_user2']} ★</div>
                             </div>
                         </a>
                         """
-                        for movie in movies_loved_the_most
+                        for film in films_loved_the_most
                     )
 
                     st.markdown(
                         f"""
                         <style>
-                            .movies-loved-the-most-card {{
+                            .films-loved-the-most-card {{
                                 padding: 5px; 
                                 background-color: #2b2b2b; 
                                 border: 1px solid #444; 
@@ -651,7 +673,7 @@ if st.button("Compare"):
                                 transition: transform 0.3s ease, background-color 0.3s ease;
                             }}
 
-                            .movies-loved-the-most-grid {{
+                            .films-loved-the-most-grid {{
                                 display: grid;
                                 gap: 10px;
                                 justify-items: center;
@@ -663,81 +685,81 @@ if st.button("Compare"):
                                 justify-content: center;
                             }}
                             
-                            .movies-loved-the-most-image {{
+                            .films-loved-the-most-image {{
                                 object-fit: cover;
                                 border-radius: 12px;
                                 margin-bottom: 10px;
                             }}
                             
                             @media (max-width: 480px) {{
-                                .movies-loved-the-most-grid {{
+                                .films-loved-the-most-grid {{
                                     grid-template-columns: repeat(1, 1fr);
                                 }}
                                 
-                                .movies-loved-the-most-image {{
+                                .films-loved-the-most-image {{
                                     width: 50%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
                             
                             @media (max-width: 767px) and (min-width: 481px) {{
-                                .movies-loved-the-most-grid {{
+                                .films-loved-the-most-grid {{
                                     grid-template-columns: repeat(2, 1fr);
                                 }}
                                 
-                                .movies-loved-the-most-image {{
+                                .films-loved-the-most-image {{
                                     width: 40%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
 
                             @media (min-width: 768px) {{
-                                .movies-loved-the-most-grid {{
+                                .films-loved-the-most-grid {{
                                     grid-template-columns: repeat(4, 1fr);
                                 }}
                                 
-                                .movies-loved-the-most-card:hover {{
+                                .films-loved-the-most-card:hover {{
                                     background-color: #272727;
                                     transform: translateY(-5px);
                                 }}
                                 
-                                .movies-loved-the-most-image {{
+                                .films-loved-the-most-image {{
                                     width: 70%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
                                 
                         </style>
-                        <div class="movies-loved-the-most-grid">
-                            {movies_loved_the_most_cards_html}
+                        <div class="films-loved-the-most-grid">
+                            {films_loved_the_most_cards_html}
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
             else:
-                with st.expander("Movies You Both Loved the Most ❤️"):
-                    st.write("No movies you both loved the most found.")
+                with st.expander("Films You Both Loved the Most ❤️"):
+                    st.write("No films you both loved the most found.")
 
-            if movies_hated_the_most:
-                with st.expander("Movies You Both Hated the Most 😤"):
-                    movies_hated_the_most_cards_html = "".join(
+            if films_hated_the_most:
+                with st.expander("Films You Both Hated the Most 😤"):
+                    films_hated_the_most_cards_html = "".join(
                         f"""
-                        <a href="{movie['movie_url']}" title="{movie['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
-                            <div class="movies-hated-the-most-card" title="{movie['title']}">
-                                <img src="{movie['poster_url']}" alt="{movie['title']}" class="movies-hated-the-most-image">
-                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{movie['title']}</div>
-                                <div style="font-size: 12px; color: #aaa;">{user1}: {movie['rating_user1']} ★</div>
-                                <div style="font-size: 12px; color: #aaa;">{user2}: {movie['rating_user2']} ★</div>
+                        <a href="{film['film_url']}" title="{film['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
+                            <div class="films-hated-the-most-card" title="{film['title']}">
+                                <img src="{film['poster_url']}" alt="{film['title']}" class="films-hated-the-most-image">
+                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{film['title']}</div>
+                                <div style="font-size: 12px; color: #aaa;">{user1}: {film['rating_user1']} ★</div>
+                                <div style="font-size: 12px; color: #aaa;">{user2}: {film['rating_user2']} ★</div>
                             </div>
                         </a>
                         """
-                        for movie in movies_hated_the_most
+                        for film in films_hated_the_most
                     )
 
                     st.markdown(
                         f"""
                         <style>
-                            .movies-hated-the-most-card {{
+                            .films-hated-the-most-card {{
                                 padding: 5px; 
                                 background-color: #2b2b2b; 
                                 border: 1px solid #444; 
@@ -752,7 +774,7 @@ if st.button("Compare"):
                                 transition: transform 0.3s ease, background-color 0.3s ease;
                             }}
 
-                            .movies-hated-the-most-grid {{
+                            .films-hated-the-most-grid {{
                                 display: grid;
                                 gap: 10px;
                                 justify-items: center;
@@ -764,79 +786,79 @@ if st.button("Compare"):
                                 justify-content: center;
                             }}
                             
-                            .movies-hated-the-most-image {{
+                            .films-hated-the-most-image {{
                                 object-fit: cover;
                                 border-radius: 12px;
                                 margin-bottom: 10px;
                             }}
                             
                             @media (max-width: 480px) {{
-                                .movies-hated-the-most-grid {{
+                                .films-hated-the-most-grid {{
                                     grid-template-columns: repeat(1, 1fr);
                                 }}
                                 
-                                .movies-hated-the-most-image {{
+                                .films-hated-the-most-image {{
                                     width: 50%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
                             
                             @media (max-width: 767px) and (min-width: 481px) {{
-                                .movies-hated-the-most-grid {{
+                                .films-hated-the-most-grid {{
                                     grid-template-columns: repeat(2, 1fr);
                                 }}
                                 
-                                .movies-hated-the-most-image {{
+                                .films-hated-the-most-image {{
                                     width: 40%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
 
                             @media (min-width: 768px) {{
-                                .movies-hated-the-most-grid {{
+                                .films-hated-the-most-grid {{
                                     grid-template-columns: repeat(4, 1fr);
                                 }}
                                 
-                                .movies-hated-the-most-card:hover {{
+                                .films-hated-the-most-card:hover {{
                                     background-color: #272727;
                                     transform: translateY(-5px);
                                 }}
                                 
-                                .movies-hated-the-most-image {{
+                                .films-hated-the-most-image {{
                                     width: 70%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
                                 
                         </style>
-                        <div class="movies-hated-the-most-grid">
-                            {movies_hated_the_most_cards_html}
+                        <div class="films-hated-the-most-grid">
+                            {films_hated_the_most_cards_html}
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
             else:
-                with st.expander("Movies You Both Hated the Most 😤"):
-                    st.write("No movies you both hated the most found.")
+                with st.expander("Films You Both Hated the Most 😤"):
+                    st.write("No films you both hated the most found.")
 
-            if movies_watch_together:
-                with st.expander("Movies You Both May Want to Watch Together 🎥"):
-                    movies_watch_together_cards_html = "".join(
+            if films_watch_together:
+                with st.expander("Films You Both May Want to Watch Together 🎥"):
+                    films_watch_together_cards_html = "".join(
                         f"""
-                        <a href="{movie['movie_url']}" title="{movie['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
-                            <div class="movies_watch_together-card">
-                                <img src="{movie['poster_url']}" alt="{movie['title']}" class="movies_watch_together-image">
-                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{movie['title']}</div>
+                        <a href="{film['film_url']}" title="{film['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
+                            <div class="films_watch_together-card">
+                                <img src="{film['poster_url']}" alt="{film['title']}" class="films_watch_together-image">
+                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{film['title']}</div>
                             </div>
                         </a>
                         """
-                        for movie in movies_watch_together
+                        for film in films_watch_together
                     )
 
                     st.markdown(
                         f"""
                         <style>
-                            .movies_watch_together-card {{
+                            .films_watch_together-card {{
                                 padding: 5px; 
                                 background-color: #2b2b2b; 
                                 border: 1px solid #444; 
@@ -851,7 +873,7 @@ if st.button("Compare"):
                                 transition: transform 0.3s ease, background-color 0.3s ease;
                             }}
 
-                            .movies_watch_together-grid {{
+                            .films_watch_together-grid {{
                                 display: grid;
                                 gap: 10px;
                                 justify-items: center;
@@ -863,63 +885,63 @@ if st.button("Compare"):
                                 justify-content: center;
                             }}
                             
-                            .movies_watch_together-image {{
+                            .films_watch_together-image {{
                                 object-fit: cover;
                                 border-radius: 12px;
                                 margin-bottom: 10px;
                             }}
                             
                             @media (max-width: 480px) {{
-                                .movies_watch_together-grid {{
+                                .films_watch_together-grid {{
                                     grid-template-columns: repeat(1, 1fr);
                                 }}
                                 
-                                .movies_watch_together-image {{
+                                .films_watch_together-image {{
                                     width: 50%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
                             
                             @media (max-width: 767px) and (min-width: 481px) {{
-                                .movies_watch_together-grid {{
+                                .films_watch_together-grid {{
                                     grid-template-columns: repeat(2, 1fr);
                                 }}
                                 
-                                .movies_watch_together-image {{
+                                .films_watch_together-image {{
                                     width: 40%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
 
                             @media (min-width: 768px) {{
-                                .movies_watch_together-grid {{
+                                .films_watch_together-grid {{
                                     grid-template-columns: repeat(4, 1fr);
                                 }}
                                 
-                                .movies_watch_together-card:hover {{
+                                .films_watch_together-card:hover {{
                                     background-color: #272727;
                                     transform: translateY(-5px);
                                 }}
                                 
-                                .movies_watch_together-image {{
+                                .films_watch_together-image {{
                                     width: 70%;
                                     aspect-ratio: 2 / 3;
                                 }}
                             }}
                                 
                         </style>
-                        <div class="movies_watch_together-grid">
-                            {movies_watch_together_cards_html}
+                        <div class="films_watch_together-grid">
+                            {films_watch_together_cards_html}
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
             else:
-                with st.expander("Movies You Both May Want to Watch Together 🎥"):
-                    st.write("No movies you both may want to watch together found.")
+                with st.expander("Films You Both May Want to Watch Together 🎥"):
+                    st.write("No films you both may want to watch together found.")
 
         else:
-            st.error("Could not fetch movies for one or both users.")
+            st.error("Could not fetch films for one or both users.")
 
 html(
     """
