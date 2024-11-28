@@ -42,6 +42,9 @@ page_bg_img = """
     background-position: center;
     background-attachment: fixed;
 }
+.stAppHeader {
+    display: none;
+}
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
