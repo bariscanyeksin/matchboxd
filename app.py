@@ -37,7 +37,7 @@ st.markdown(
 page_bg_img = """
 <style>
 .stApp {
-    background-image: url("https://i.ibb.co/ZLHkpdB/bg-opacity.png");
+    background-image: url("https://i.ibb.co/gPfxJQz/bg-opacity-min.png");
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
