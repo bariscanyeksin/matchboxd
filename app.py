@@ -842,7 +842,7 @@ if st.button("Compare"):
                     st.write("No films you both hated the most found.")
 
             if films_watch_together:
-                with st.expander("Films You Both May Want to Watch Together 🎥"):
+                with st.expander("Films You Both May Want to Watch Together 🫂"):
                     films_watch_together_cards_html = "".join(
                         f"""
                         <a href="{film['film_url']}" title="{film['title']}" target="_blank" style="text-decoration: none; color: inherit; display: block; height: 100%; width: 100%; border-radius: 10px;">
@@ -937,7 +937,7 @@ if st.button("Compare"):
                         unsafe_allow_html=True,
                     )
             else:
-                with st.expander("Films You Both May Want to Watch Together 🎥"):
+                with st.expander("Films You Both May Want to Watch Together 🫂"):
                     st.write("No films you both may want to watch together found.")
 
         else:
