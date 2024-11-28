@@ -34,28 +34,45 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+page_bg_img = """
+<style>
+.stApp {
+    background-image: url("https://i.ibb.co/ZLHkpdB/bg-opacity.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+</style>
+"""
+st.markdown(page_bg_img, unsafe_allow_html=True)
+
 st.title("Matchboxd.")
 st.write("Compare the movies watched by two Letterboxd users.")
 
-with st.expander("How to find your username?"):
+with st.expander("How to find username?"):
     st.markdown(
         """
         <div style="margin-bottom: 15px;">
             <h4>On PC:</h4>
-            <p>Your Letterboxd username is typically the name that appears in the URL when you visit your profile. For example:</p>
-            <p style="color: #3498db; font-size:15px;">https://letterboxd.com/username/</p>
+            <p>Letterboxd username is typically the name that appears in the URL when you visit a user profile. For example:</p>
+            <p style="color: #3498db; font-size:15px;">https://letterboxd.com/<strong>username</strong>/</p>
         </div>
         <div style="margin-bottom: 15px;">
             <h4>On Phone:</h4>
-            <p>Open the Letterboxd app, go to your profile, tap the <strong>cogwheel icon</strong> (settings) at the top of your profile page, and you'll see your username at the top of this page.</p>
+            <p>Open the Letterboxd app, go to a profile, tap the <strong>three-dots icon</strong> at the top right.</p>
         </div>
         <div style="text-align: center; margin-bottom: 20px;">
-            <img src="https://i.ibb.co/xSdJ557/50ce062c-70c3-4c62-ad9d-0fc901f94ee0.jpg" 
-            alt="Example of finding your username on the Letterboxd app"
+            <img src="https://i.ibb.co/yqR89kj/user-page.jpg" 
+            alt="Example of finding a username on the Letterboxd app"
             class="mobile_img">
-            <p style="font-size: 11px; margin-top: 10px; color: #7b7b7b;">
-                Example of finding your username on the Letterboxd app
-            </p>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <p>And you'll see the username in the marked field.</p>
+        </div>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://i.ibb.co/g9zRnFt/get-username.jpg" 
+            alt="Example of finding a username on the Letterboxd app"
+            class="mobile_img">
         </div>
         <style>
             .mobile_img {
