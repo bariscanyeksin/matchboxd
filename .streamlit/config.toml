@@ -1,6 +1,6 @@
 [client]
 showErrorDetails = false
-toolbarMode = viewer
+toolbarMode = "viewer"
 showSidebarNavigation = false
 
 [ui]
