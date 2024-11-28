@@ -1,5 +1,7 @@
 [client]
 showErrorDetails = false
+toolbarMode = viewer
+showSidebarNavigation = false
 
 [ui]
 hideTopBar = true
