@@ -207,7 +207,7 @@ def get_all_films(username):
         for li in film_list.find_all("li"):
             div = li.find("div", {"data-target-link": True})
             if div:
-                film_title = div.find("img").get("alt")
+                title = div.find("img").get("alt")
 
                 film_url = div["data-target-link"]
 
@@ -218,21 +218,26 @@ def get_all_films(username):
                 else:
                     rating = 0
 
-                films_with_details[film_title] = {
-                    "rating": rating,
-                    "film_url": film_url,
+                films_with_details[film_url] = {
+                    "title": title,
+                    "rating": rating
                 }
 
     return films_with_details
 
 
-_ = """def calculate_similarity_with_weighted_ratings(
-    films1, ratings1, films2, ratings2, threshold=0.5
+def calculate_similarity_with_weighted_ratings(
+    films1, ratings1, films2, ratings2, threshold=0.1, weight_common=0.5, weight_ratings=0.5
 ):
-    common_films = set(films1).intersection(set(films2))
+    if not films1 or not films2:
+        return 0
 
+    film_rating_map1 = dict(zip(films1, ratings1))
+    film_rating_map2 = dict(zip(films2, ratings2))
+
+    common_films = set(film_rating_map1.keys()).intersection(film_rating_map2.keys())
     if not common_films:
-        return 0, []
+        return 0
 
     common_ratio = len(common_films) / max(len(films1), len(films2))
 
@@ -240,32 +245,27 @@ _ = """def calculate_similarity_with_weighted_ratings(
     total_possible_score = 0
 
     for film in common_films:
-        try:
-            rating1 = ratings1[films1.index(film)]
-            rating2 = ratings2[films2.index(film)]
+        rating1 = film_rating_map1.get(film)
+        rating2 = film_rating_map2.get(film)
 
-            if rating1 is None or rating2 is None:
-                continue
-
-            if abs(rating1 - rating2) <= threshold:
-                weight = 1 - (abs(rating1 - rating2) / threshold)
-            else:
-                weight = 0
-
-            total_weight_score += weight
-            total_possible_score += 1
-
-        except ValueError:
+        if rating1 is None or rating2 is None:
             continue
 
-    if total_possible_score > 0:
-        rating_similarity = total_weight_score / total_possible_score
-    else:
-        rating_similarity = 0
+        difference = abs(rating1 - rating2)
+        if difference <= threshold:
+            weight = 1 - (difference / threshold)
+        else:
+            weight = 0
 
-    similarity = (common_ratio * 0.5) + (rating_similarity * 0.5)
+        total_weight_score += weight
+        total_possible_score += 1
 
-    return similarity"""
+    rating_similarity = (
+        total_weight_score / total_possible_score if total_possible_score > 0 else 0
+    )
+
+    similarity = (common_ratio * weight_common) + (rating_similarity * weight_ratings)
+    return similarity
     
 def calculate_similarity_basic(films1, films2):
     common_films = set(films1).intersection(set(films2))
@@ -353,7 +353,7 @@ def get_watchlist(username):
         for li in film_list.find_all("li"):
             div = li.find("div", {"data-target-link": True})
             if div:
-                film_title = div.find("img").get("alt")
+                title = div.find("img").get("alt")
 
                 film_url = div["data-target-link"]
 
@@ -364,9 +364,9 @@ def get_watchlist(username):
                 else:
                     rating = 0
 
-                watchlist[film_title] = {
-                    "rating": rating,
-                    "film_url": film_url,
+                watchlist[film_url] = {
+                    "title": title,
+                    "rating": rating
                 }
     return watchlist
 
@@ -382,19 +382,16 @@ def find_high_rated_common_films(films_with_ratings1, films_with_ratings2):
             if (
                 rating1 is not None
                 and rating2 is not None
-                and rating1 >= 4.5
-                and rating2 >= 4.5
+                and rating1 >= 4
+                and rating2 >= 4
             ):
                 common_high_rated_films.append(
                     {
-                        "title": film,
+                        "title": films_with_ratings1[film]["title"],
                         "rating_user1": rating1,
                         "rating_user2": rating2,
-                        "film_url": "https://letterboxd.com"
-                        + films_with_ratings1[film]["film_url"],
-                        "poster_url": create_poster_url(
-                            films_with_ratings1[film]["film_url"]
-                        ),
+                        "film_url": "https://letterboxd.com" + film,
+                        "poster_url": create_poster_url(film),
                     }
                 )
 
@@ -412,19 +409,16 @@ def find_low_rated_common_films(films_with_ratings1, films_with_ratings2):
             if (
                 rating1 is not None
                 and rating2 is not None
-                and 0.5 <= rating1 <= 1.5
-                and 0.5 <= rating2 <= 1.5
+                and 0.5 <= rating1 <= 2
+                and 0.5 <= rating2 <= 2
             ):
                 common_low_rated_films.append(
                     {
-                        "title": film,
+                        "title": films_with_ratings1[film]["title"],
                         "rating_user1": rating1,
                         "rating_user2": rating2,
-                        "film_url": "https://letterboxd.com"
-                        + films_with_ratings1[film]["film_url"],
-                        "poster_url": create_poster_url(
-                            films_with_ratings1[film]["film_url"]
-                        ),
+                        "film_url": "https://letterboxd.com" + film,
+                        "poster_url": create_poster_url(film),
                     }
                 )
 
@@ -433,7 +427,7 @@ def find_low_rated_common_films(films_with_ratings1, films_with_ratings2):
 
 def find_common_films_from_watchlist(watchlist_films1, watchlist_films2):
     common_films_from_watchlist = []
-    watchlist_films2_set = set(watchlist_films2.keys())  # Convert keys to a set for fast lookups
+    watchlist_films2_set = set(watchlist_films2.keys())
 
     for film, details in watchlist_films1.items():
         if film in watchlist_films2_set:
@@ -443,16 +437,15 @@ def find_common_films_from_watchlist(watchlist_films1, watchlist_films2):
             if rating1 is not None and rating2 is not None:
                 common_films_from_watchlist.append(
                     {
-                        "title": film,
+                        "title": details["title"],
                         "rating_user1": rating1,
                         "rating_user2": rating2,
-                        "film_url": "https://letterboxd.com" + details["film_url"],
-                        "poster_url": create_poster_url(details["film_url"]),
+                        "film_url": "https://letterboxd.com" + film,
+                        "poster_url": create_poster_url(film),
                     }
                 )
 
     return common_films_from_watchlist
-
 
 if st.button("Compare"):
     if not user1 or not user2:
@@ -500,8 +493,8 @@ if st.button("Compare"):
 
         if films1 and films2:
             # Calculate similarity
-            # similarity, common_films = calculate_similarity(films1, films2)
-            # similarity_percentage = round(similarity * 100, 2)
+            detailed_similarity = calculate_similarity_with_weighted_ratings(films1, ratings1, films2, ratings2)
+            similarity_percentage = int(round(detailed_similarity * 100, 2))
 
             common_ratio_user1, common_ratio_user2 = calculate_similarity_basic(
                 films1, films2
@@ -623,6 +616,13 @@ if st.button("Compare"):
             )
             st.markdown(
                 f"""
+                <div style="text-align: center; margin-bottom:20px;">
+                    The similarity between 
+                    <span style="color:#4e82cf; font-weight:bold;">{user1}</span> 
+                    and 
+                    <span style="color:#913636; font-weight:bold;">{user2}</span> 
+                    is <span style="color:#27732a; font-size:18px; font-weight:bold;">{similarity_percentage}%</span>
+                </div>
                 <div style="text-align: center; margin-bottom:20px;">
                     <span style="color:#4e82cf; font-weight:bold;">{user1}</span> watched 
                     <span style="color:#27732a; font-size:18px; font-weight:bold;">{user2_percentage}%</span> 
