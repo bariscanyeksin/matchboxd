@@ -5,6 +5,7 @@ import json
 import time
 from streamlit.components.v1 import html
 import numpy as np
+import random
 
 st.set_page_config(page_title="Matchboxd", page_icon="🎬")
 
@@ -101,6 +102,8 @@ with st.expander("How to find username?"):
 user1 = st.text_input("User 1", placeholder="Enter the first Letterboxd username")
 user2 = st.text_input("User 2", placeholder="Enter the second Letterboxd username")
 
+# Renk listesi tanımlayalım
+SIMILARITY_COLORS = ["#FF8000", "#00E054", "#40BCF4"]
 
 def get_profile_image(user):
     image_url = f"https://letterboxd.com/{user}/"
@@ -495,6 +498,20 @@ if st.button("Compare"):
             st.warning("You cannot compare a user with themselves.")
         else:
             # start_time = time.time()
+            
+            random_color = random.choice(SIMILARITY_COLORS)
+            
+            # CSS için spinner stil tanımı
+            st.markdown(
+                f"""
+                <style>
+                .stSpinner > div > div {{
+                    border-top-color: {random_color} !important;
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
 
             with st.spinner(f"Fetching films for {user1}..."):
                 img_url1 = get_profile_image(user1)
@@ -538,7 +555,7 @@ if st.button("Compare"):
                 # Calculate similarity
                 detailed_similarity = calculate_enhanced_similarity(films1, ratings1, films2, ratings2)
                 similarity_percentage = int(round(detailed_similarity * 100, 2))
-
+                
                 common_ratio_user1, common_ratio_user2 = calculate_similarity_basic(
                     films1, films2
                 )
@@ -660,7 +677,7 @@ if st.button("Compare"):
                 st.markdown(
                     f"""
                     <div style="text-align: center; margin-bottom: 10px;">
-                        <span style="font-size: 48px; font-weight: bold; color: #40BCF4;">{similarity_percentage}%</span>
+                        <span style="font-size: 48px; font-weight: bold; color: {random_color};">{similarity_percentage}%</span>
                     </div>
                     <div style="text-align: center; color: #999; font-size: 14px; margin-bottom: 30px;">
                         also...
