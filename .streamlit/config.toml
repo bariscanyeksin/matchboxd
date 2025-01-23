@@ -3,3 +3,6 @@ showErrorDetails = false
 
 [ui]
 hideTopBar = true
+
+[theme]
+base="dark"
