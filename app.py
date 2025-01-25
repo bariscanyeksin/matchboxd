@@ -603,10 +603,11 @@ if st.button("Compare"):
                                 transform: translateY(-5px);
                             }}
                             .user-img {{
-                                transition: transform 0.3s ease, background-color 0.3s ease;
+                                transition: all 0.3s ease;
                             }}
                             .user-img:hover {{
                                 transform: translateY(-5px);
+                                border-color: #FFFFFF !important;
                             }}
                             </style>
                         """,
@@ -618,7 +619,7 @@ if st.button("Compare"):
                             <div id="user_img"></div>
                             <div style="text-align: center;">
                                 <a href="https://letterboxd.com/{user1}" target="_blank">
-                                    <img src="{img_url1}" alt="{user1}" title="{user1}" class="user-img" style="border-radius: 50%; width: 100px; height: 100px; margin-bottom: 10px; border: 4px solid rgba(255, 255, 255, 0.8); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">
+                                    <img src="{img_url1}" alt="{user1}" title="{user1}" class="user-img" style="border-radius: 50%; width: 100px; height: 100px; margin-bottom: 10px; border: 4px solid rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">
                                 </a>
                             </div>
                             """,
