@@ -6,8 +6,11 @@ import time
 from streamlit.components.v1 import html
 import numpy as np
 import random
+from modules.nav import Navbar
 
 st.set_page_config(page_title="Matchboxd", page_icon="🎬")
+
+Navbar()
 
 st.markdown(
     """
@@ -16,6 +19,10 @@ st.markdown(
 
     html, body, [class*="cache"], [class*="st-"], h1, h2, h3  {
         font-family: 'Poppins', sans-serif;
+    }
+    
+    div[data-testid="stSidebarNav"] {
+        display: none;
     }
 
     .stHeading {
@@ -106,13 +113,17 @@ user2 = st.text_input("User 2", placeholder="Enter the second Letterboxd usernam
 SIMILARITY_COLORS = ["#FF8000", "#00E054", "#40BCF4"]
 
 def get_profile_image(user):
-    image_url = f"https://letterboxd.com/{user}/"
-    page = requests.get(image_url)
-    bs4 = BeautifulSoup(page.text, "html.parser")
-    prof_img_ = bs4.find("span", {"class": "avatar -a110 -large"})
-    if prof_img_:
-        return prof_img_.find("img").attrs["src"]
-    else:
+    try:
+        image_url = f"https://letterboxd.com/{user}/"
+        page = requests.get(image_url, timeout=10)  # timeout eklendi
+        page.raise_for_status()  # HTTP hatalarını kontrol et
+        bs4 = BeautifulSoup(page.text, "html.parser")
+        prof_img_ = bs4.find("span", {"class": "avatar -a110 -large"})
+        if prof_img_:
+            return prof_img_.find("img").attrs["src"]
+        return None
+    except Exception as e:
+        st.error(f"Profil resmi alınırken hata oluştu: {str(e)}")
         return None
 
 
@@ -195,37 +206,44 @@ def get_all_films(username):
         total_pages = 1
 
     for page in range(1, total_pages + 1):
-        url = f"{base_url}{page}/"
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
+        try:
+            url = f"{base_url}{page}/"
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            
+            # Rate limiting - her istek arasında 1 saniye bekle
+            time.sleep(1)
+            
+            soup = BeautifulSoup(response.text, "html.parser")
+            film_list = soup.find(
+                "ul", {"class": "poster-list -p70 -grid film-list clear"}
+            )
+
+            if not film_list:
+                break
+
+            for li in film_list.find_all("li"):
+                div = li.find("div", {"data-target-link": True})
+                if div:
+                    title = div.find("img").get("alt")
+
+                    film_url = div["data-target-link"]
+
+                    rating_span = li.find("span", {"class": "rating"})
+                    if rating_span:
+                        rating_text = rating_span.text.strip()
+                        rating = rating_text.count("★") + 0.5 * rating_text.count("½")
+                    else:
+                        rating = 0
+
+                    films_with_details[film_url] = {
+                        "title": title,
+                        "rating": rating
+                    }
+
+        except Exception as e:
+            st.error(f"Sayfa {page} alınırken hata oluştu: {str(e)}")
             break
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        film_list = soup.find(
-            "ul", {"class": "poster-list -p70 -grid film-list clear"}
-        )
-
-        if not film_list:
-            break
-
-        for li in film_list.find_all("li"):
-            div = li.find("div", {"data-target-link": True})
-            if div:
-                title = div.find("img").get("alt")
-
-                film_url = div["data-target-link"]
-
-                rating_span = li.find("span", {"class": "rating"})
-                if rating_span:
-                    rating_text = rating_span.text.strip()
-                    rating = rating_text.count("★") + 0.5 * rating_text.count("½")
-                else:
-                    rating = 0
-
-                films_with_details[film_url] = {
-                    "title": title,
-                    "rating": rating
-                }
 
     return films_with_details
 
@@ -275,36 +293,32 @@ def calculate_enhanced_similarity(films1, ratings1, films2, ratings2):
     if not films1 or not films2:
         return 0
 
-    film_rating_map1 = dict(zip(films1, ratings1))
-    film_rating_map2 = dict(zip(films2, ratings2))
+    # NumPy array'lerine dönüştür - daha hızlı işlem için
+    ratings1_arr = np.array(ratings1)
+    ratings2_arr = np.array(ratings2)
     
-    common_films = set(film_rating_map1.keys()).intersection(film_rating_map2.keys())
-    if not common_films:
-        return 0
+    # Ortak filmler için maske oluştur
+    common_films = set(films1).intersection(films2)
+    mask1 = np.array([f in common_films for f in films1])
+    mask2 = np.array([f in common_films for f in films2])
+    
+    # Sadece ortak filmleri al
+    common_ratings1 = ratings1_arr[mask1]
+    common_ratings2 = ratings2_arr[mask2]
+    
+    if len(common_ratings1) < 2:
+        return len(common_films) / len(set(films1).union(films2))
         
-    # Ortak film oranı (Jaccard similarity)
-    jaccard_similarity = len(common_films) / len(set(films1).union(films2))
-    
-    # Pearson korelasyon katsayısı
-    common_ratings1 = [film_rating_map1[f] for f in common_films]
-    common_ratings2 = [film_rating_map2[f] for f in common_films]
-    
-    if len(common_ratings1) < 2:  # Pearson korelasyonu için en az 2 veri noktası gerekli
-        return jaccard_similarity
-        
+    # Pearson korelasyonu hesapla
     correlation = np.corrcoef(common_ratings1, common_ratings2)[0, 1]
     
-    # Genre-based similarity eklenebilir
-    # Temporal similarity eklenebilir (kullanıcıların filmleri izleme zamanları)
+    # Jaccard benzerliği
+    jaccard = len(common_films) / len(set(films1).union(films2))
     
     # Ağırlıklı ortalama
-    weights = {
-        'jaccard': 0.3,
-        'correlation': 0.7
-    }
-    
+    weights = {'jaccard': 0.3, 'correlation': 0.7}
     final_similarity = (
-        weights['jaccard'] * jaccard_similarity +
+        weights['jaccard'] * jaccard +
         weights['correlation'] * (correlation if not np.isnan(correlation) else 0)
     )
     
@@ -994,22 +1008,58 @@ if st.button("Compare"):
             else:
                 st.error("Could not fetch films for one or both users.")
 
+            st.markdown(
+                """
+                <style>
+                /* Mobil uyumluluk için medya sorguları */
+                @media (max-width: 768px) {
+                    .films-loved-the-most-grid,
+                    .films-hated-the-most-grid,
+                    .films_watch_together-grid {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                    }
+                    
+                    .films-loved-the-most-image,
+                    .films-hated-the-most-image,
+                    .films_watch_together-image {
+                        width: 100% !important;
+                    }
+                }
+                
+                /* Animasyon geliştirmeleri */
+                .films-loved-the-most-card,
+                .films-hated-the-most-card,
+                .films_watch_together-card {
+                    transition: all 0.3s ease;
+                }
+                
+                .films-loved-the-most-card:hover,
+                .films-hated-the-most-card:hover,
+                .films_watch_together-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+
 html(
     """
-  <script>
-      // Time of creation of this script = {now}.
-      // The time changes everytime and hence would force streamlit to execute JS function
-      function scrollToMySection() {{
-          var element = window.parent.document.getElementById("{tab_id}");
-          if (element) {{
-              element.scrollIntoView({{ behavior: "smooth" }});
-          }} else {{
-              setTimeout(scrollToMySection, 100);
-          }}
-      }}
-      scrollToMySection();
-  </script>
-  """.format(
+<script>
+    // Time of creation of this script = {now}.
+    // The time changes everytime and hence would force streamlit to execute JS function
+    function scrollToMySection() {{
+        var element = window.parent.document.getElementById("{tab_id}");
+        if (element) {{
+            element.scrollIntoView({{ behavior: "smooth" }});
+        }} else {{
+            setTimeout(scrollToMySection, 100);
+        }}
+    }}
+    scrollToMySection();
+</script>
+""".format(
         now=time.time(), tab_id="user_img"
     )
 )
