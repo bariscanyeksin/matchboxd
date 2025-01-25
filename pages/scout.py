@@ -9,7 +9,7 @@ import random
 from modules.nav import Navbar
 import app
 
-st.set_page_config(page_title="Matchboxd", page_icon="🎬")
+st.set_page_config(page_title="Matchboxd-Scout", page_icon="🎬")
 
 Navbar()
 
