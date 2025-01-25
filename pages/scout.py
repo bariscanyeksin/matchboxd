@@ -393,7 +393,7 @@ if st.button("Find"):
                                     </a>
                                     <div class="user-meta" style="color: #888">
                                         {user['profile_url'].split('/')[-2]}
-                                        <div style="margin-top: 5px; font-size: 16px;">
+                                        <div style="font-size: 16px;">
                                             {stars_html}
                                         </div>
                                     </div>
