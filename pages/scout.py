@@ -321,12 +321,12 @@ if st.button("Find"):
                             font-size: 18px;
                             font-weight: 600;
                             margin-bottom: 5px;
-                            text-decoration: none;
+                            text-decoration: none !important;
                         }}
                         
                         .user-name:hover {{
                             color: {SIMILARITY_COLORS['green']} !important;
-                            text-decoration: none;
+                            text-decoration: none !important;
                         }}
                         
                         .user-meta {{
@@ -342,14 +342,14 @@ if st.button("Find"):
                             border-radius: 20px;
                             font-size: 14px;
                             font-weight: 500;
-                            text-decoration: none;
+                            text-decoration: none !important;
                             transition: all 0.3s ease;
                         }}
                         
                         .view-profile-btn:hover {{
                             background-color: {SIMILARITY_COLORS['blue']};
                             color: #FFFFFF !important;
-                            text-decoration: none;
+                            text-decoration: none !important;
                         }}
                         
                         @media (max-width: 768px) {{
