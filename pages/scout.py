@@ -232,10 +232,11 @@ if st.button("Find"):
                             transform: translateY(-5px);
                         }}
                         .user-img {{
-                            transition: transform 0.3s ease, background-color 0.3s ease;
+                            transition: all 0.3s ease;
                         }}
                         .user-img:hover {{
                             transform: translateY(-5px);
+                            border-color: #FFFFFF !important;
                         }}
                         </style>
                     """,
@@ -245,7 +246,7 @@ if st.button("Find"):
                     f"""
                     <div style="text-align: center;">
                         <a href="https://letterboxd.com/{username}" target="_blank">
-                            <img src="{user_img_url}" alt="{username}" title="{username}" class="user-img" style="border-radius: 50%; width: 100px; height: 100px; margin-bottom: 10px; border: 4px solid rgba(255, 255, 255, 0.8); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">
+                            <img src="{user_img_url}" alt="{username}" title="{username}" class="user-img" style="border-radius: 50%; width: 100px; height: 100px; margin-bottom: 10px; border: 4px solid rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">
                         </a>
                     </div>
                     """,
@@ -320,12 +321,12 @@ if st.button("Find"):
                             font-size: 18px;
                             font-weight: 600;
                             margin-bottom: 5px;
-                            text-decoration: none !important;
+                            text-decoration: none;
                         }}
                         
                         .user-name:hover {{
                             color: {SIMILARITY_COLORS['green']} !important;
-                            text-decoration: none !important;
+                            text-decoration: none;
                         }}
                         
                         .user-meta {{
@@ -341,14 +342,14 @@ if st.button("Find"):
                             border-radius: 20px;
                             font-size: 14px;
                             font-weight: 500;
-                            text-decoration: none !important;
+                            text-decoration: none;
                             transition: all 0.3s ease;
                         }}
                         
                         .view-profile-btn:hover {{
                             background-color: {SIMILARITY_COLORS['blue']};
                             color: #FFFFFF !important;
-                            text-decoration: none !important;
+                            text-decoration: none;
                         }}
                         
                         @media (max-width: 768px) {{
