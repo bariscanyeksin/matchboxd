@@ -653,7 +653,7 @@ if st.button("Compare"):
                             f"""
                             <div style="text-align: center;">
                                 <a href="https://letterboxd.com/{user2}" target="_blank">
-                                    <img src="{img_url2}" alt="{user2}" title="{user2}" class="user-img" style="border-radius: 50%; width: 100px; height: 100px; margin-bottom: 10px; border: 4px solid rgba(255, 255, 255, 0.8); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">
+                                    <img src="{img_url2}" alt="{user2}" title="{user2}" class="user-img" style="border-radius: 50%; width: 100px; height: 100px; margin-bottom: 10px; border: 4px solid rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">
                                 </a>
                             </div>
                             """,
