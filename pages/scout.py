@@ -1,11 +1,6 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import json
-import time
-from streamlit.components.v1 import html
-import numpy as np
-import random
 from modules.nav import Navbar
 import app
 
@@ -25,7 +20,7 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
     html, body, [class*="cache"], [class*="st-"], h1, h2, h3  {
-        font-family: 'Poppins', sans-serif !important;
+        font-family: 'Poppins', sans-serif;
     }
     
     div[data-testid="stSidebarNav"] {
@@ -151,39 +146,52 @@ def find_users_with_same_favorites(username, favourite_films):
     # Film slug'larını al
     film_slugs = [film['slug'] for film in favourite_films]
     users = []
+    seen_users = set()  # Aynı kullanıcıyı tekrar eklememek için
 
-    # En az 3 film için kombinasyonları oluştur
+    # 4 film kombinasyonu için arama
+    search_query_4 = " ".join([f"fan:{slug}" for slug in film_slugs])
+    search_url = f"https://letterboxd.com/s/search/{search_query_4}/"
+    response = requests.get(search_url)
+    
+    if response.status_code == 200:
+        bs4 = BeautifulSoup(response.text, "html.parser")
+        for li in bs4.find_all("li", class_="search-result -person"):
+            user_link = li.find("a", class_="name")
+            if user_link and username not in user_link['href']:
+                user_profile_url = f"https://letterboxd.com{user_link['href']}"
+                if user_profile_url not in seen_users:
+                    seen_users.add(user_profile_url)
+                    users.append({
+                        "username": user_link.text.strip(),
+                        "profile_url": user_profile_url,
+                        "avatar": li.find("img")['src'],
+                        "common_films": 4
+                    })
+
+    # 3 film kombinasyonları için arama
     for i in range(len(film_slugs)):
         for j in range(i + 1, len(film_slugs)):
             for k in range(j + 1, len(film_slugs)):
-                # 3 film kombinasyonu
-                search_query = f"fan:{film_slugs[i]} fan:{film_slugs[j]} fan:{film_slugs[k]}"
-                search_url = f"https://letterboxd.com/s/search/{search_query}/"
+                search_query_3 = f"fan:{film_slugs[i]} fan:{film_slugs[j]} fan:{film_slugs[k]}"
+                search_url = f"https://letterboxd.com/s/search/{search_query_3}/"
                 response = requests.get(search_url)
+                
+                if response.status_code == 200:
+                    bs4 = BeautifulSoup(response.text, "html.parser")
+                    for li in bs4.find_all("li", class_="search-result -person"):
+                        user_link = li.find("a", class_="name")
+                        if user_link and username not in user_link['href']:
+                            user_profile_url = f"https://letterboxd.com{user_link['href']}"
+                            if user_profile_url not in seen_users:
+                                seen_users.add(user_profile_url)
+                                users.append({
+                                    "username": user_link.text.strip(),
+                                    "profile_url": user_profile_url,
+                                    "avatar": li.find("img")['src'],
+                                    "common_films": 3
+                                })
 
-                if response.status_code != 200:
-                    st.error("Could not fetch users with the same favourite films.")
-                    return []
-
-                bs4 = BeautifulSoup(response.text, "html.parser")
-
-                # Kullanıcıları bul
-                for li in bs4.find_all("li", class_="search-result -person"):
-                    user_link = li.find("a", class_="name")
-                    if user_link:
-                        found_username = user_link.text.strip()
-                        user_profile_url = user_link['href']
-                        
-                        # Kullanıcının kendi profilini hariç tut
-                        if username not in user_profile_url:
-                            avatar = li.find("img")['src']
-                            users.append({
-                                "username": found_username,
-                                "profile_url": f"https://letterboxd.com{user_profile_url}",
-                                "avatar": avatar
-                            })
-                            
-                return users
+    return users
 
 username = st.text_input("Username", placeholder="Enter the Letterboxd username")
 
@@ -312,12 +320,12 @@ if st.button("Find"):
                             font-size: 18px;
                             font-weight: 600;
                             margin-bottom: 5px;
-                            text-decoration: none !important;
+                            text-decoration: none;
                         }}
                         
                         .user-name:hover {{
                             color: {SIMILARITY_COLORS['green']} !important;
-                            text-decoration: none !important;
+                            text-decoration: none;
                         }}
                         
                         .user-meta {{
@@ -333,14 +341,14 @@ if st.button("Find"):
                             border-radius: 20px;
                             font-size: 14px;
                             font-weight: 500;
-                            text-decoration: none !important;
+                            text-decoration: none;
                             transition: all 0.3s ease;
                         }}
                         
                         .view-profile-btn:hover {{
                             background-color: {SIMILARITY_COLORS['blue']};
                             color: #FFFFFF !important;
-                            text-decoration: none !important;
+                            text-decoration: none;
                         }}
                         
                         @media (max-width: 768px) {{
@@ -366,6 +374,12 @@ if st.button("Find"):
                     
                     # Kullanıcı kartları
                     for user in users_with_same_favorites:
+                        # Yıldız sayısına göre HTML oluştur
+                        stars_html = "".join([
+                            f'<span style="color: {SIMILARITY_COLORS["orange"]}; margin-right: 2px;">★</span>' 
+                            for _ in range(user['common_films'])
+                        ])
+                        
                         st.markdown(
                             f"""
                             <div class="user-card">
@@ -378,6 +392,9 @@ if st.button("Find"):
                                     </a>
                                     <div class="user-meta" style="color: #888">
                                         {user['profile_url'].split('/')[-2]}
+                                        <div style="margin-top: 5px; font-size: 16px;">
+                                            {stars_html}
+                                        </div>
                                     </div>
                                 </div>
                                 <a href="{user['profile_url']}" target="_blank" class="view-profile-btn">
